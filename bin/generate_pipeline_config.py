@@ -182,15 +182,15 @@ def main(submission: dict, base_pipeline_dir: str,  pipeline_config_path: str):
     # find id of nuclei channel
     nuclei_channel_id_per_cycle = dict()
     for cycle in raw_meta_per_cycle:
-        nuclei_channel_id = 1
+        nuclei_channel_id = 0
         for i, ch_name in enumerate(raw_meta_per_cycle[cycle]['channel_names']):
             if ch_name.lower() == submission['nuclei_channel'].lower():
-                nuclei_channel_id = i + 1
+                nuclei_channel_id = i
                 break
         nuclei_channel_id_per_cycle[cycle] = nuclei_channel_id
 
     first_cycle_nuclei_channel_id = nuclei_channel_id_per_cycle[first_cycle]
-    nuclei_channel_name = 'CH' + str(first_cycle_nuclei_channel_id)
+    nuclei_channel_name = 'CH' + str(first_cycle_nuclei_channel_id + 1)
 
     # collect paths of all mxif datasets
     mxif_data_paths = []
@@ -210,7 +210,7 @@ def main(submission: dict, base_pipeline_dir: str,  pipeline_config_path: str):
     general_ome_meta = first_cycle_raw_meta
     general_ome_meta['channel_names'] = [submission['nuclei_channel']]
     general_ome_meta['per_cycle_channel_names'] = [nuclei_channel_name]
-    general_ome_meta['emission_wavelengths'] = [first_cycle_raw_meta['emission_wavelengths'][first_cycle_nuclei_channel_id-1]]
+    general_ome_meta['emission_wavelengths'] = [first_cycle_raw_meta['emission_wavelengths'][first_cycle_nuclei_channel_id]]
     general_ome_meta['region_names'] = ['reg' + str(i) for i in range(1, num_regions_for_segmentation + 1)]
     general_ome_meta['num_cycles'] = num_cycles_for_segmentation
 
