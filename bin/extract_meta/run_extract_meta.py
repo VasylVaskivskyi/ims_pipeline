@@ -13,7 +13,7 @@ def main(input_file: str, output_file: str, mapping: str = ''):
                                                                                  output_file=output_file,
                                                                                  mapping=mapping)
     print('extracting raw metadatafrom file' + input_file)
-    res = subprocess.run(command, shell=True, check=True, capture_output=True)
+    res = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if res.returncode == 0:
         print('successfully extracted')
     else:
