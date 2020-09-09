@@ -160,7 +160,7 @@ def get_meta_for_each_cycle(per_cycle_info, base_pipeline_dir, block_size, overl
         slicer_meta_per_cycle[cycle] = slicer_meta
         raw_meta_per_cycle[cycle] = extracted_raw_meta
 
-        return raw_meta_per_cycle, slicer_meta_per_cycle
+    return raw_meta_per_cycle, slicer_meta_per_cycle
 
 
 def main(submission: dict, base_pipeline_dir: str,  pipeline_config_path: str):
@@ -184,7 +184,7 @@ def main(submission: dict, base_pipeline_dir: str,  pipeline_config_path: str):
     for cycle in raw_meta_per_cycle:
         nuclei_channel_id = 1
         for i, ch_name in enumerate(raw_meta_per_cycle[cycle]['channel_names']):
-            if ch_name == submission['nuclei_channel']:
+            if ch_name.lower() == submission['nuclei_channel'].lower():
                 nuclei_channel_id = i + 1
                 break
         nuclei_channel_id_per_cycle[cycle] = nuclei_channel_id
