@@ -58,10 +58,7 @@ def arrange_by_cycle(proc_micro_files, raw_micro_files):
         if cycle in per_cycle_info:
             if region in per_cycle_info[cycle]:
                 per_cycle_info[cycle][region].update(raw_path)
-            else:
-                continue
-        else:
-            continue
+
     return per_cycle_info
 
 

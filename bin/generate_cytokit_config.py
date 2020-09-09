@@ -65,7 +65,7 @@ def generate_processor_meta(acquisition_meta: dict, submission: dict):
                 "target_shape": [acquisition_meta["tile_width"] + acquisition_meta["tile_overlap_x"],
                                  acquisition_meta["tile_height"] + acquisition_meta["tile_overlap_y"]],
                 "nuclei_channel_name": nuclei_channel,
-                "segmentation_params": {"memb_min_dist": 8, "memb_sigma": 5, "memb_gamma": 0.25, "marker_dilation": 3},
+                "segmentation_params": {"memb_min_dist": 8, "memb_sigma": 5, "memb_gamma": 0.25, "marker_min_size": 5, "marker_dilation": 3},
                 "quantification_params": {"nucleus_intensity": True, "cell_graph": True}
             }
         }
@@ -75,17 +75,17 @@ def generate_processor_meta(acquisition_meta: dict, submission: dict):
 
 def main(pipeline_config_path: str, cytokit_config_path: str):
     with open(pipeline_config_path, 'r') as s:
-        config = yaml.safe_load(s)
+        pipeline_config = yaml.safe_load(s)
 
-    slicer_meta = read_slicer_meta(config['slicer_meta'])
-    ome_meta = config['ome_meta']
+    slicer_meta = read_slicer_meta(pipeline_config['slicer_meta'])
+    ome_meta = pipeline_config['ome_meta']
 
     # same as acquisition_meta but without key - acquisition
     acq_meta = dict()
     acq_meta.update(slicer_meta)
     acq_meta.update(ome_meta)
 
-    submission = config['submission']
+    submission = pipeline_config['submission']
 
     head_meta = {"name": submission['experiment_name'],
                  "date": str(datetime.datetime.now()),

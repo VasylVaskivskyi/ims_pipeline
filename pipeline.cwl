@@ -98,6 +98,8 @@ steps:
     in:
       - id: mxif_dataset_dir_path
         source: mxif_dataset_dir_path
+      - id: pipeline_config
+        source: initiate_pipeline/pipeline_config
     run: steps/run_combine_mxif.cwl
     out:
       - id: combined_mxif

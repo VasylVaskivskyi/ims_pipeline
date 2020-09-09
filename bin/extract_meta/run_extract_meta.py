@@ -12,7 +12,12 @@ def main(input_file: str, output_file: str, mapping: str = ''):
                                                                                  input_file=input_file,
                                                                                  output_file=output_file,
                                                                                  mapping=mapping)
-    subprocess.run(command, shell=True)
+    print('extracting raw metadatafrom file' + input_file)
+    res = subprocess.run(command, shell=True, check=True, capture_output=True)
+    if res.returncode == 0:
+        print('successfully extracted')
+    else:
+        raise Exception('There was an error while running the script: \n' + res.stderr.decode('utf-8'))
 
 
 if __name__ == '__main__':

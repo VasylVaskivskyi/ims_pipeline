@@ -30,17 +30,10 @@ def get_all_channels_and_tiffdata(xml):
     return nchannels, channels, tiffdata
 
 
-def main(ims_pos_path: str, ims_neg_path: str, ims_combined_out_path: str):
-    pos_xml_str = read_ome_meta(ims_pos_path)
-    neg_xml_str = read_ome_meta(ims_neg_path)
-
-    pos_xml = strip_namespace(pos_xml_str)
-    neg_xml = strip_namespace(neg_xml_str)
-
-    num_pos_ch, pos_ch, pos_tiff = get_all_channels_and_tiffdata(pos_xml)
-    num_neg_ch, neg_ch, neg_tiff = get_all_channels_and_tiffdata(neg_xml)
-
-    combined_xml = copy.copy(pos_xml)
+def create_new_xml_from_combined_metadata(positive_xml, negative_xml):
+    num_pos_ch, pos_ch, pos_tiff = get_all_channels_and_tiffdata(positive_xml)
+    num_neg_ch, neg_ch, neg_tiff = get_all_channels_and_tiffdata(negative_xml)
+    combined_xml = copy.copy(positive_xml)
 
     for child in combined_xml.find('Image').find('Pixels').getchildren():
         combined_xml.find('Image').find('Pixels').remove(child)
@@ -65,21 +58,33 @@ def main(ims_pos_path: str, ims_neg_path: str, ims_combined_out_path: str):
 
     # these attributes contain symbol that is cannot be encoded with ascii. ascii encoding required by tifffile
     pixel_attribs = combined_xml.find('Image').find('Pixels').attrib
-    if 'PhysicalSizeXUnit' in pixel_attribs:
+    if pixel_attribs['PhysicalSizeXUnit'] == 'μm':
         del combined_xml.find('Image').find('Pixels').attrib['PhysicalSizeXUnit']
-    if 'PhysicalSizeYUnit' in pixel_attribs:
+    if pixel_attribs['PhysicalSizeYUnit'] == 'μm':
         del combined_xml.find('Image').find('Pixels').attrib['PhysicalSizeYUnit']
 
     combined_xml_str = ET.tostring(combined_xml, method='xml', encoding='utf-8')
     xml_declaration = '<?xml version="1.0" encoding="UTF-8"?>'
-    description = combined_xml_str.decode('ascii', errors='backslashreplace')
-    description = xml_declaration + description
+    final_combined_xml_str = combined_xml_str.decode('ascii', errors='backslashreplace')
+    final_combined_xml_str = xml_declaration + final_combined_xml_str
+
+    return final_combined_xml_str, num_pos_ch, num_neg_ch
+
+
+def main(ims_pos_path: str, ims_neg_path: str, ims_combined_out_path: str):
+    pos_xml_str = read_ome_meta(ims_pos_path)
+    neg_xml_str = read_ome_meta(ims_neg_path)
+
+    pos_xml = strip_namespace(pos_xml_str)
+    neg_xml = strip_namespace(neg_xml_str)
+
+    combined_xml, num_pos_ch, num_neg_ch = create_new_xml_from_combined_metadata(pos_xml, neg_xml)
 
     with tif.TiffWriter(ims_combined_out_path, bigtiff=True) as TW:
         for i in range(0, num_pos_ch):
-            TW.save(tif.imread(ims_pos_path, key=i), photometric='minisblack', description=description)
+            TW.save(tif.imread(ims_pos_path, key=i), photometric='minisblack', description=combined_xml)
         for i in range(0, num_neg_ch):
-            TW.save(tif.imread(ims_neg_path, key=i), photometric='minisblack', description=description)
+            TW.save(tif.imread(ims_neg_path, key=i), photometric='minisblack', description=combined_xml)
 
 
 if __name__ == '__main__':
