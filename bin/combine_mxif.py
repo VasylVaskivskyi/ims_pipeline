@@ -38,7 +38,19 @@ def get_necessary_meta(path):
     return meta
 
 
-def create_new_xml_from_combined_metadata(old_xml, mxif_data_paths):
+def filter_redundant_nuclei_channels(mxif_data_paths, nuclei_channel_id_list):
+    metadata_per_cycle = []
+    for i, path in enumerate(mxif_data_paths):
+        meta = get_necessary_meta(path)
+        redundant_nuclei_channel_id = nuclei_channel_id_list[i]
+        if redundant_nuclei_channel_id != -1:
+            del meta['channels'][redundant_nuclei_channel_id]
+            meta['nchannels'] -= 1
+        metadata_per_cycle.append(meta)
+    return metadata_per_cycle
+
+
+def create_new_xml_from_combined_metadata(old_xml, metadata_per_cycle):
     # set proper ome attributes tags
     combined_xml = copy.deepcopy(old_xml)
     proper_ome_attribs = {'xmlns': 'http://www.openmicroscopy.org/Schemas/OME/2016-06',
@@ -48,22 +60,22 @@ def create_new_xml_from_combined_metadata(old_xml, mxif_data_paths):
 
     for attr, val in proper_ome_attribs.items():
         combined_xml.set(attr, val)
-    for child in combined_xml.find('Image').find('Pixels').getchildren():
-        combined_xml.find('Image').find('Pixels').remove(child)
+    for child_node in combined_xml.find('Image').find('Pixels'):
+        combined_xml.find('Image').find('Pixels').remove(child_node)
 
     combined_meta = []
-    prev_num_ch = 0
-    for path in mxif_data_paths:
-        meta = get_necessary_meta(path)
-        for i in range(0, meta['nchannels']):
-            new_id = str(prev_num_ch + i)
-            meta['channels'][i].set('ID', 'Channel:0:' + new_id)
-            # meta['tiffdata'][i].set('FisrtC', new_id)
-            # meta['tiffdata'][i].set('IFD', new_id)
-        combined_meta.append(meta)
-        prev_num_ch += meta['nchannels']
 
-    total_channels = str(prev_num_ch)
+    num_channels = 0
+    for meta in metadata_per_cycle:
+        for j in range(0, meta['nchannels']):
+            new_id = str(num_channels)
+            meta['channels'][j].set('ID', 'Channel:0:' + new_id)
+            # meta['tiffdata'][j].set('FisrtC', new_id)
+            # meta['tiffdata'][j].set('IFD', new_id)
+            num_channels += 1
+        combined_meta.append(meta)
+
+    total_channels = str(num_channels)
     combined_xml.find('Image').find('Pixels').set('SizeC', total_channels)
 
     for dataset in combined_meta:
@@ -97,23 +109,29 @@ def get_values_from_sorted_dict(dictionary: dict):
     return values_from_sorted_dict
 
 
-def main(pipeline_config: dict, mxif_data_paths: list, mxif_combined_out_path: str):
+def get_number_of_tiff_pages(file_path):
+    with tif.TiffFile(file_path) as TF:
+        npages = len(TF.pages)
+    return npages
 
-    first_cycle_xml = strip_namespace(read_ome_meta(mxif_data_paths[0]))
-    combined_xml, combined_meta = create_new_xml_from_combined_metadata(first_cycle_xml, mxif_data_paths)
+
+def main(pipeline_config: dict, mxif_data_paths: list, mxif_combined_out_path: str):
 
     nuclei_channel_id_per_cycle = pipeline_config['submission']['nuclei_channel_id_per_cycle']
     nuclei_channel_id_list = get_values_from_sorted_dict(nuclei_channel_id_per_cycle)
     nuclei_channel_id_list[0] = -1  # to keep nuclei channel in first cycle
 
+    first_cycle_xml = strip_namespace(read_ome_meta(mxif_data_paths[0]))
+    metadata_per_cycle = filter_redundant_nuclei_channels(mxif_data_paths, nuclei_channel_id_list)
+    combined_xml, combined_meta = create_new_xml_from_combined_metadata(first_cycle_xml, metadata_per_cycle)
+
     with tif.TiffWriter(mxif_combined_out_path, bigtiff=True) as TW:
-        for i, dataset in enumerate(mxif_data_paths):
-            npages = combined_meta[i]['nchannels']
+        for i, data_path in enumerate(mxif_data_paths):
+            npages = get_number_of_tiff_pages(data_path)
             redundant_nuclei_channel_id = nuclei_channel_id_list[i]
             for page in range(0, npages):
                 if page != redundant_nuclei_channel_id:
-                    TW.save(tif.imread(dataset, key=page),
-                            photometric='minisblack', description=combined_xml)
+                    TW.save(tif.imread(data_path, key=page), photometric='minisblack', description=combined_xml)
 
 
 if __name__ == '__main__':

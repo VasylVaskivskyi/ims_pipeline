@@ -35,8 +35,8 @@ def create_new_xml_from_combined_metadata(positive_xml, negative_xml):
     num_neg_ch, neg_ch, neg_tiff = get_all_channels_and_tiffdata(negative_xml)
     combined_xml = copy.copy(positive_xml)
 
-    for child in combined_xml.find('Image').find('Pixels').getchildren():
-        combined_xml.find('Image').find('Pixels').remove(child)
+    for child_node in combined_xml.find('Image').find('Pixels'):
+        combined_xml.find('Image').find('Pixels').remove(child_node)
 
     total_channels = str(num_pos_ch + num_neg_ch)
     combined_xml.find('Image').find('Pixels').set('SizeC', total_channels)
