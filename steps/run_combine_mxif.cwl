@@ -10,7 +10,8 @@ baseCommand: ["python", "/opt/ims_pipeline/bin/run_combine_mxif.py"]
 inputs:
   pipeline_config:
     type: File
-    prefix: "--pipeline_config"
+    inputBinding:
+      prefix: "--pipeline_config"
 
   mxif_dataset_dir_path:
     type: Directory

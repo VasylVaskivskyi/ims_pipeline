@@ -9,6 +9,31 @@ import dask
 Image = np.ndarray
 
 
+def generate_ome_meta_for_mask(size_x: int, size_y: int, dtype):
+        template = """<?xml version="1.0" encoding="utf-8"?>
+            <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2016-06 http://www.openmicroscopy.org/Schemas/OME/2016-06/ome.xsd">
+              <Image ID="Image:0" Name="segmentation_mask_stitched.ome.tiff">
+
+                <AcquisitionDate>2020-04-14T15:54:14.201715</AcquisitionDate>
+                <Pixels BigEndian="true" DimensionOrder="XYZCT" ID="Pixels:0" SizeC="4" SizeT="1" SizeX="{size_x}" SizeY="size_y" SizeZ="1" Type="{dtype}">
+                    <Channel ID="Channel:0:0" Name="cells" SamplesPerPixel="1" />
+                    <Channel ID="Channel:0:1" Name="nuclei" SamplesPerPixel="1" />
+                    <Channel ID="Channel:0:2" Name="cell_boundaries" SamplesPerPixel="1" />
+                    <Channel ID="Channel:0:3" Name="nucleus_boundaries" SamplesPerPixel="1" />
+
+                    <TiffData FirstC="0" FirstT="0" FirstZ="0" IFD="0" PlaneCount="1" />
+                    <TiffData FirstC="1" FirstT="0" FirstZ="0" IFD="1" PlaneCount="1" />
+                    <TiffData FirstC="2" FirstT="0" FirstZ="0" IFD="2" PlaneCount="1" />
+                    <TiffData FirstC="3" FirstT="0" FirstZ="0" IFD="3" PlaneCount="1" />
+                </Pixels>
+
+              </Image>
+            </OME>
+        """
+        ome_meta = template.format(size_x=size_x, size_y=size_y, dtype=dtype.name)
+        return ome_meta
+
+
 def alpha_num_order(string: str) -> str:
     """ Returns all numbers on 5 digits to let sort the string with numeric order.
     Ex: alphaNumOrder("a6b12.125")  ==> "a00006b00012.00125"
@@ -27,7 +52,7 @@ def parse_str_to_dict(string):
 
 def stitch_plane(path_list: List[str], page: int,
                  x_nblocks: int, y_nblocks: int,
-                 block_shape: list, dtype: np.dtype,
+                 block_shape: list, dtype,
                  overlap: int, padding: dict, remap_dict: dict = None) -> Tuple[Image, Union[np.ndarray, None]]:
 
     x_axis = -1
@@ -250,21 +275,13 @@ def main(img_dir: str, out_path: str, overlap: int, padding_str: str):
 
     with tif.TiffFile(path_list[0]) as TF:
         block_shape = list(TF.series[0].shape)
-        dtype = TF.series[0].dtype
         npages = len(TF.pages)
-        try:
-            ome_meta = TF.ome_metadata
-        except AttributeError:
-            ome_meta = None
 
-    if remap_dict is not None:
-        dtype = np.uint32
+    dtype = np.uint32
 
-    if ome_meta is not None:
-        big_image_x_size = (x_nblocks * (block_shape[-1] - overlap * 2)) - padding["left"] - padding["right"]
-        big_image_y_size = (y_nblocks * (block_shape[-2] - overlap * 2)) - padding["top"] - padding["bottom"]
-        ome_meta = re.sub(r'SizeX="\d+"', 'SizeX="' + str(big_image_x_size) + '"', ome_meta)
-        ome_meta = re.sub(r'SizeY="\d+"', 'SizeY="' + str(big_image_y_size) + '"', ome_meta)
+    big_image_x_size = (x_nblocks * (block_shape[-1] - overlap * 2)) - padding["left"] - padding["right"]
+    big_image_y_size = (y_nblocks * (block_shape[-2] - overlap * 2)) - padding["top"] - padding["bottom"]
+    ome_meta = generate_ome_meta_for_mask(big_image_x_size, big_image_y_size, dtype)
 
     with tif.TiffWriter(out_path, bigtiff=True) as TW:
         for p in range(0, npages):

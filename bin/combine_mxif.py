@@ -63,15 +63,21 @@ def create_new_xml_from_combined_metadata(old_xml, metadata_per_cycle):
     for child_node in combined_xml.find('Image').find('Pixels'):
         combined_xml.find('Image').find('Pixels').remove(child_node)
 
-    combined_meta = []
+    tiff_data = ET.Element('TiffData', dict(FirstC="0", FirstT="0", FirstZ="0", IFD="0", PlaneCount="1"))
 
+    combined_meta = []
     num_channels = 0
     for meta in metadata_per_cycle:
+        meta['tiffdata'] = []
         for j in range(0, meta['nchannels']):
             new_id = str(num_channels)
             meta['channels'][j].set('ID', 'Channel:0:' + new_id)
-            # meta['tiffdata'][j].set('FisrtC', new_id)
-            # meta['tiffdata'][j].set('IFD', new_id)
+
+            new_tiff_data = copy.copy(tiff_data)
+            new_tiff_data.set('FisrtC', new_id)
+            new_tiff_data.set('IFD', new_id)
+            meta['tiffdata'].append(new_tiff_data)
+
             num_channels += 1
         combined_meta.append(meta)
 
@@ -81,10 +87,10 @@ def create_new_xml_from_combined_metadata(old_xml, metadata_per_cycle):
     for dataset in combined_meta:
         for c in dataset['channels']:
             combined_xml.find('Image').find('Pixels').append(c)
-    #
-    # for dataset in combined_meta:
-    #     for t in dataset['tiffdata']:
-    #         combined_xml.find('Image').find('Pixels').append(t)
+
+    for dataset in combined_meta:
+        for t in dataset['tiffdata']:
+            combined_xml.find('Image').find('Pixels').append(t)
 
     # μm contain symbol that is cannot be encoded with ascii. ascii encoding is required by tifffile
     pixel_attribs = combined_xml.find('Image').find('Pixels').attrib
@@ -95,7 +101,7 @@ def create_new_xml_from_combined_metadata(old_xml, metadata_per_cycle):
 
     combined_xml_str = ET.tostring(combined_xml, method='xml', encoding='utf-8')
     xml_declaration = '<?xml version="1.0" encoding="UTF-8"?>'
-    final_combined_xml_str = combined_xml_str.decode('ascii', errors='backslashreplace')
+    final_combined_xml_str = combined_xml_str.decode('ascii', errors='ignore')
     final_combined_xml_str = xml_declaration + final_combined_xml_str
 
     return final_combined_xml_str, combined_meta

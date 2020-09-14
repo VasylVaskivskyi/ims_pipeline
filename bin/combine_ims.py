@@ -26,34 +26,41 @@ def get_all_channels_and_tiffdata(xml):
     pixels = xml.find('Image').find('Pixels')
     nchannels = int(pixels.get('SizeC'))
     channels = pixels.findall('Channel')
-    tiffdata = pixels.findall('TiffData')
-    return nchannels, channels, tiffdata
-
+    return nchannels, channels
 
 def create_new_xml_from_combined_metadata(positive_xml, negative_xml):
-    num_pos_ch, pos_ch, pos_tiff = get_all_channels_and_tiffdata(positive_xml)
-    num_neg_ch, neg_ch, neg_tiff = get_all_channels_and_tiffdata(negative_xml)
+    num_pos_ch, pos_ch = get_all_channels_and_tiffdata(positive_xml)
+    num_neg_ch, neg_ch = get_all_channels_and_tiffdata(negative_xml)
     combined_xml = copy.copy(positive_xml)
 
     for child_node in combined_xml.find('Image').find('Pixels'):
         combined_xml.find('Image').find('Pixels').remove(child_node)
 
-    total_channels = str(num_pos_ch + num_neg_ch)
-    combined_xml.find('Image').find('Pixels').set('SizeC', total_channels)
+    total_channels = num_pos_ch + num_neg_ch
+    combined_xml.find('Image').find('Pixels').set('SizeC', str(total_channels))
 
     for i in range(0, len(neg_ch)):
         new_id = str(num_pos_ch + i)
         neg_ch[i].set('ID', 'Channel:0:' + new_id)
-        neg_tiff[i].set('FisrtC', new_id)
-        neg_tiff[i].set('IFD', new_id)
 
-    # combine positive and negative channels and tiffdata
+    # combine positive and negative images
     pos_ch.extend(neg_ch)
-    pos_tiff.extend(neg_tiff)
 
     for c in pos_ch:
         combined_xml.find('Image').find('Pixels').append(c)
-    for t in pos_tiff:
+
+    # create TiffData
+    tiff_data = ET.Element('TiffData', dict(FirstC="0", FirstT="0", FirstZ="0", IFD="0", PlaneCount="1"))
+    tiff_data_list = []
+    for ch_id in range(0, total_channels):
+        new_id = str(ch_id)
+        new_tiff_data = copy.copy(tiff_data)
+        new_tiff_data.set('FisrtC', new_id)
+        new_tiff_data.set('IFD', new_id)
+        tiff_data_list.append(new_tiff_data)
+
+    # add tiff data to the combined meta
+    for t in tiff_data_list:
         combined_xml.find('Image').find('Pixels').append(t)
 
     # these attributes contain symbol that is cannot be encoded with ascii. ascii encoding required by tifffile
@@ -65,7 +72,7 @@ def create_new_xml_from_combined_metadata(positive_xml, negative_xml):
 
     combined_xml_str = ET.tostring(combined_xml, method='xml', encoding='utf-8')
     xml_declaration = '<?xml version="1.0" encoding="UTF-8"?>'
-    final_combined_xml_str = combined_xml_str.decode('ascii', errors='backslashreplace')
+    final_combined_xml_str = combined_xml_str.decode('ascii', errors='ignore')
     final_combined_xml_str = xml_declaration + final_combined_xml_str
 
     return final_combined_xml_str, num_pos_ch, num_neg_ch
