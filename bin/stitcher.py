@@ -30,7 +30,7 @@ def generate_ome_meta_for_mask(size_x: int, size_y: int, dtype):
               </Image>
             </OME>
         """
-        ome_meta = template.format(size_x=size_x, size_y=size_y, dtype=dtype.name)
+        ome_meta = template.format(size_x=size_x, size_y=size_y, dtype=np.dtype(dtype).name)
         return ome_meta
 
 

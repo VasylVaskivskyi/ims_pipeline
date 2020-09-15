@@ -73,8 +73,8 @@ def create_new_xml_from_combined_metadata(old_xml, metadata_per_cycle):
             new_id = str(num_channels)
             meta['channels'][j].set('ID', 'Channel:0:' + new_id)
 
-            new_tiff_data = copy.copy(tiff_data)
-            new_tiff_data.set('FisrtC', new_id)
+            new_tiff_data = copy.deepcopy(tiff_data)
+            new_tiff_data.set('FirstC', new_id)
             new_tiff_data.set('IFD', new_id)
             meta['tiffdata'].append(new_tiff_data)
 
@@ -92,12 +92,9 @@ def create_new_xml_from_combined_metadata(old_xml, metadata_per_cycle):
         for t in dataset['tiffdata']:
             combined_xml.find('Image').find('Pixels').append(t)
 
-    # μm contain symbol that is cannot be encoded with ascii. ascii encoding is required by tifffile
-    pixel_attribs = combined_xml.find('Image').find('Pixels').attrib
-    if pixel_attribs['PhysicalSizeXUnit'] == 'μm':
-        del combined_xml.find('Image').find('Pixels').attrib['PhysicalSizeXUnit']
-    if pixel_attribs['PhysicalSizeYUnit'] == 'μm':
-        del combined_xml.find('Image').find('Pixels').attrib['PhysicalSizeYUnit']
+    # PhysicalSizeUnit may contain symbol that cannot be encoded with ascii. ascii encoding is required by tifffile
+    del combined_xml.find('Image').find('Pixels').attrib['PhysicalSizeXUnit']
+    del combined_xml.find('Image').find('Pixels').attrib['PhysicalSizeYUnit']
 
     combined_xml_str = ET.tostring(combined_xml, method='xml', encoding='utf-8')
     xml_declaration = '<?xml version="1.0" encoding="UTF-8"?>'

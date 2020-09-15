@@ -7,7 +7,6 @@ import yaml
 import stitcher
 
 
-
 def main(pipeline_config: str, cytokit_out_dir: str):
     with open(pipeline_config, 'r') as s:
         config = yaml.safe_load(s)

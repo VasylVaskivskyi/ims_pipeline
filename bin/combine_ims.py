@@ -28,6 +28,7 @@ def get_all_channels_and_tiffdata(xml):
     channels = pixels.findall('Channel')
     return nchannels, channels
 
+
 def create_new_xml_from_combined_metadata(positive_xml, negative_xml):
     num_pos_ch, pos_ch = get_all_channels_and_tiffdata(positive_xml)
     num_neg_ch, neg_ch = get_all_channels_and_tiffdata(negative_xml)
@@ -55,7 +56,7 @@ def create_new_xml_from_combined_metadata(positive_xml, negative_xml):
     for ch_id in range(0, total_channels):
         new_id = str(ch_id)
         new_tiff_data = copy.copy(tiff_data)
-        new_tiff_data.set('FisrtC', new_id)
+        new_tiff_data.set('FirstC', new_id)
         new_tiff_data.set('IFD', new_id)
         tiff_data_list.append(new_tiff_data)
 
@@ -63,12 +64,9 @@ def create_new_xml_from_combined_metadata(positive_xml, negative_xml):
     for t in tiff_data_list:
         combined_xml.find('Image').find('Pixels').append(t)
 
-    # these attributes contain symbol that is cannot be encoded with ascii. ascii encoding required by tifffile
-    pixel_attribs = combined_xml.find('Image').find('Pixels').attrib
-    if pixel_attribs['PhysicalSizeXUnit'] == 'μm':
-        del combined_xml.find('Image').find('Pixels').attrib['PhysicalSizeXUnit']
-    if pixel_attribs['PhysicalSizeYUnit'] == 'μm':
-        del combined_xml.find('Image').find('Pixels').attrib['PhysicalSizeYUnit']
+    # PhysicalSizeUnit may contain symbol that cannot be encoded with ascii. ascii encoding is required by tifffile
+    del combined_xml.find('Image').find('Pixels').attrib['PhysicalSizeXUnit']
+    del combined_xml.find('Image').find('Pixels').attrib['PhysicalSizeYUnit']
 
     combined_xml_str = ET.tostring(combined_xml, method='xml', encoding='utf-8')
     xml_declaration = '<?xml version="1.0" encoding="UTF-8"?>'
